@@ -154,17 +154,55 @@ var getAllWords  =function(){
 }
 
 var crawlContentHandler = function() {
-    database.find('all_words_1', {meaning: { $exists: false }}, function(results){ 
+    database.find('all_words', {meaning: { $exists: false }}, function(results){ 
         console.log('=================='+results.length);  
         let count = 0;     
         results.each(function(err,doc){
             if(err===null && doc!==null){
                     crawlContent.parse(doc.id, function(data){
                    console.log('>>done crawler ' + ++count);
-                    database.update('all_words_1', {id:doc.id}, {meaning:data})
+                    database.update('all_words', {id:doc.id}, {meaning:data})
                 });
             }
         });        
+    });
+}
+
+var extractToSqlite =  function() {
+    var sqlite3 = require('sqlite3').verbose();
+    var db = new sqlite3.Database('./test.db');
+    
+   
+    db.serialize(function() {
+        var createTable = function() {
+            var str = '_abcdefghijklmnopqrstuvwxyz';
+            for(var i=0;i<str.length;i++){
+
+                db.run('CREATE TABLE "main"."dict_'+ str.charAt(i) +'" (    "id" TEXT NOT NULL PRIMARY KEY ,    "textDisplay" TEXT NOT NULL,    "formattedDisplay" TEXT NOT NULL);');
+            }
+        }
+
+        var insertaztable = function() {
+
+            function insert(tableName){
+                database.find('all_words', {textDisplay :{$regex:'^a'}}, function(results){
+                    
+                    results.each(function(err,doc){
+                        if(err===null && doc!==null){
+                            db.run('insert into "main"."dict_' + tableName + '"(`id`,`textDisplay`,`formattedDisplay`) values(?,?,?)', doc.id, doc.textDisplay, doc.formattedDisplay);
+                        }
+                    });
+                });
+            }
+
+            var str = 'bcdefghijklmnopqrstuvwxyz';
+            for(var i=0;i<str.length;i++){
+                insert(str.charAt(i));
+            }
+        }
+
+        insertaztable();
+        
     });
 }
 
@@ -172,3 +210,5 @@ var crawlContentHandler = function() {
 //database.init(getGroupRemaining);
 //database.init(getAllWords);
 database.init(crawlContentHandler);
+
+//database.init(extractToSqlite);
